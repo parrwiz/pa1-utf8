@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+
+
+
 int32_t is_ascii(char str[]){
     for(int i=0; str[i]!='\0'; i++){
         if((unsigned char)str[i]>127){
@@ -71,10 +74,19 @@ int32_t codepoint_index_to_byte_index(char str[], int32_t cpi) {
 }
 void utf8_substring(char str[], int32_t cpi_start, int32_t cpi_end, char result[])
 {
-    if (cpi_start<0 || cpi_end<=cpi_start){
-            return;
+    if(cpi_start<0){
+	    return;
     }
-    int32_t bi_start=codepoint_index_to_byte_index(str,cpi_start);
+    int32_t str_length= utf8_strlen(str);
+    if(cpi_end>str_length){
+	    cpi_end=str_length;
+    }
+    if(cpi_end<=cpi_start){
+	    result[0]='\0';
+	    return;
+    }
+
+     int32_t bi_start=codepoint_index_to_byte_index(str,cpi_start);
     int32_t bi_end=codepoint_index_to_byte_index(str, cpi_end);
 
     if(bi_start==-1 || bi_end==-1){
@@ -129,6 +141,48 @@ int32_t is_animal_emoji_at( char str[], int32_t cpi) {
 }
 
 
+//Implementation of next_utf8_char
+void next_utf8_char(char str[], int32_t cpi, char result[]) {
+    result[0] = '\0';  
+
+    int32_t total_codepoints = utf8_strlen(str);
+    
+    if (cpi >= total_codepoints) {
+        return;      }
+
+    int32_t current_codepoint = codepoint_at(str, cpi);
+    if (current_codepoint == -1) {
+        return;  
+    }
+
+    int32_t next_codepoint = current_codepoint + 1;
+
+    if (next_codepoint <= 0x7F) {
+        // 1 byte
+        result[0] = (char)next_codepoint;
+        result[1] = '\0';
+    } else if (next_codepoint <= 0x7FF) {
+        // 2 bytes
+        result[0] = 0b11000000 | (next_codepoint >> 6);
+        result[1] = 0b10000000 | (next_codepoint & 0b00111111);
+        result[2] = '\0';
+    } else if (next_codepoint <= 0xFFFF) {
+        // 3 bytes
+        result[0] = 0b11100000 | (next_codepoint >> 12);
+        result[1] = 0b10000000 | ((next_codepoint >> 6) & 0b00111111);
+        result[2] = 0b10000000 | (next_codepoint & 0b00111111);
+        result[3] = '\0';
+    } else if (next_codepoint <= 0x10FFFF) {
+        // 4 bytes
+        result[0] = 0b11110000 | (next_codepoint >> 18);
+        result[1] = 0b10000000 | ((next_codepoint >> 12) & 0b00111111);
+        result[2] = 0b10000000 | ((next_codepoint >> 6) & 0b00111111);
+        result[3] = 0b10000000 | (next_codepoint & 0b00111111);
+        result[4] = '\0';
+    } else {
+        return;  
+    }
+}
 
 int main(){
     /*
@@ -260,10 +314,15 @@ printf("\n");
             int32_t bi = codepoint_index_to_byte_index(input, i);
             int32_t nextbi = codepoint_index_to_byte_index(input, i + 1);
             fwrite(input + bi, 1, nextbi - bi, stdout);
-            break; 
         }
     }
     printf("\n");
+
+    char result[1000];
+    int32_t idx=3;
+    next_utf8_char(input,idx,result);
+    printf("Next Character of Codepoint at Index %d: %s\n",idx,result);
+
 
 
 
